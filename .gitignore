@@ -127,3 +127,13 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Folder where models are saved
+model_artifacts/
+
+# Ignore PyCharm files
+.idea/
+*.iml
+*.ipr
+*.iws
+
