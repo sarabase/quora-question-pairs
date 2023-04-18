@@ -17,6 +17,12 @@ from fuzzywuzzy import fuzz # To compute similiraties.
 
 import editdistance
 
+import gensim.downloader as api
+from scipy.spatial.distance import cosine
+
+import fasttext.util
+
+
 # ======================= Functions for feature engineering =======================
 # Number of words for a given text
 def words_count(text):
@@ -225,6 +231,164 @@ def total_unique_words_ratio(q1, q2):
     num_unique_words = num_of_unique_words(q1, q2)
     num_words = num_of_words(q1, q2)
     return num_unique_words/num_words
+
+
+def oov_count(text, vocab):
+    """
+    Computes the number of out of vocabulary words in a text given a vocabulary.
+
+    Parameters:
+        text (str): The text to compute the OOV counts for.
+        vocab (set): A set containing the vocabulary of known words.
+
+    Returns:
+        int: The number of out of vocabulary words in the text.
+    """
+    words = text.split()
+    oov_words = [word for word in words if word.lower() not in vocab]
+    return len(oov_words)
+
+
+def rare_word_count(text, word_counts, threshold):
+    """
+    Computes the count of rare words in a text.
+
+    Args:
+        text (str): The input text to compute the rare word count for.
+        word_counts (dict): A dictionary containing the counts of each word in the corpus.
+        threshold (int): The threshold for a word to be considered "rare".
+
+    Returns:
+        int: The count of rare words in the input text.
+    """
+    # Split the text into words
+    words = text.split()
+
+    # Compute the count of rare words
+    rare_word_count = sum([1 for word in words if word_counts.get(word, 0) < threshold])
+
+    return rare_word_count
+
+
+def named_entity_overlap(text1, text2):
+    """
+    Computes the named entity overlap between two texts.
+
+    Args:
+        text1 (str): The first text.
+        text2 (str): The second text.
+
+    Returns:
+        float: The named entity overlap score between the two texts.
+    """
+    # Tokenize the texts into sentences
+    sentences1 = nltk.sent_tokenize(text1)
+    sentences2 = nltk.sent_tokenize(text2)
+
+    # Identify the named entities in each text
+    entities1 = set()
+    for sentence in sentences1:
+        tokens = nltk.word_tokenize(sentence)
+        tagged = nltk.pos_tag(tokens)
+        named_entities = nltk.ne_chunk(tagged, binary=False)
+        for entity in named_entities:
+            if isinstance(entity, nltk.tree.Tree):
+                entity_name = " ".join([token[0] for token in entity])
+                entities1.add(entity_name)
+
+    entities2 = set()
+    for sentence in sentences2:
+        tokens = nltk.word_tokenize(sentence)
+        tagged = nltk.pos_tag(tokens)
+        named_entities = nltk.ne_chunk(tagged, binary=False)
+        for entity in named_entities:
+            if isinstance(entity, nltk.tree.Tree):
+                entity_name = " ".join([token[0] for token in entity])
+                entities2.add(entity_name)
+
+    # Compute the named entity overlap between the two texts
+    overlap = len(entities1.intersection(entities2)) / float(len(entities1.union(entities2)))
+
+    return overlap
+
+def compute_word2vec_embeddings(text):
+    """
+    Computes the word2vec embedding for a given text by taking the mean of embeddings of all the words in the text.
+
+    Args:
+        text (str): The input text for which the word embeddings need to be computed.
+
+    Returns:
+        numpy.ndarray or None: The computed embedding for the given text. If no embeddings are found, returns None.
+    """
+
+    model = api.load("word2vec-google-news-300")
+
+    # Convert text to lowercase and split it into individual words
+    words = text.lower().split()
+
+    # Initialize empty list for embeddings
+    embeddings = []
+
+    # Iterate through each word in the text
+    for word in words:
+        # Check if the word is present in the word2vec model's vocabulary
+        if word in model.index_to_key:
+            # If the word is present, append its embedding to the list of embeddings
+            embeddings.append(model[word])
+
+    # If no embeddings were found, return None
+    if len(embeddings) == 0:
+        return None
+    else:
+        # Take the mean of all embeddings to get a single embedding for the entire text
+        return np.mean(embeddings, axis=0)
+
+def compute_cosine_similarity(embedding1, embedding2):
+    """
+    Computes the cosine similarity between two given word embeddings.
+
+    Args:
+        embedding1 (numpy.ndarray or None): The first word embedding.
+        embedding2 (numpy.ndarray or None): The second word embedding.
+
+    Returns:
+        float or None: The cosine similarity between the two embeddings. If either of the embeddings is None, returns None.
+    """
+    # Check if either of the embeddings is None
+    if embedding1 is None or embedding2 is None:
+        return None
+    else:
+        # Compute the cosine similarity between the two embeddings
+        return 1 - cosine(embedding1, embedding2)
+
+def compute_fasttext_embeddings(text):
+    """
+    Computes the FastText embedding for a given text by taking the mean of embeddings of all the words in the text.
+
+    Args:
+        text (str): The input text for which the word embeddings need to be computed.
+
+    Returns:
+        numpy.ndarray or None: The computed embedding for the given text. If no embeddings are found, returns None.
+    """
+    fasttext.util.download_model('en', if_exists='ignore')  # English
+    ft_model = fasttext.load_model('cc.en.300.bin')
+    # Convert text to lowercase and split it into individual words
+    words = text.lower().split()
+
+    # Initialize empty list for embeddings
+    embeddings = []
+
+    # Iterate through each word in the text
+    for word in words:
+        embeddings.append(ft_model.get_word_vector(word))
+    # If no embeddings were found, return None
+    if len(embeddings) == 0:
+        return None
+    else:
+        # Take the mean of all embeddings to get a single embedding for the entire text
+        return np.mean(embeddings, axis=0)
 
 # ======================= Functions for text preprocessing =======================
 # Tokenize a text
