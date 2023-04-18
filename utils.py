@@ -3,7 +3,7 @@ from sklearn.metrics import ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
 import nltk
-from collections import Counter
+from collections import defaultdict
 import unidecode
 import unicodedata
 
@@ -12,7 +12,6 @@ import scipy
 import numpy as np
 import re # To do ReGeX
 import spacy # For NER
-nlp = spacy.load('en_core_web_sm')
 from fuzzywuzzy import fuzz # To compute similiraties.
 
 import editdistance
@@ -62,24 +61,6 @@ def nonAscii_word_count(text):
 
     return non_ascii_word_count
 
-
-def common_words_count(text1, text2):
-    '''
-    Args:
-      text1 (str): First sentence
-      text2 (str): Second sentence
-
-    Return:
-      int: The number of common words that the two sentences have in common
-    '''
-    # Compute the tokens for each sentence
-    tokens1 = set(tokenize_text(text1))
-    tokens2 = set(tokenize_text(text2))
-
-    # Return the number of common words
-    return len(tokens1 & tokens2)
-
-
 def one_hot_begin(corpus):
     '''
     Args:
@@ -125,7 +106,11 @@ def first_word_equal(row):
     """
     q1_words = row['question1'].split()
     q2_words = row['question2'].split()
-    return int(q1_words[0] == q2_words[0])
+
+    if len(q1_words) > 0 and len(q2_words) > 0:
+        return int(q1_words[0] == q2_words[0])
+    else:
+        return 0
 
 def last_word_equal(row):
     """Computes whether the last word of the two questions are equal.
@@ -138,7 +123,11 @@ def last_word_equal(row):
     """
     q1_words = row['question1'].split()
     q2_words = row['question2'].split()
-    return int(q1_words[-1] == q2_words[-1])
+
+    if len(q1_words) > 0 and len(q2_words) > 0:
+        return int(q1_words[-1] == q2_words[-1])
+    else:
+        return 0
 
 def common_words_count(row):
     """Computes the number of common words between the two questions.
@@ -307,9 +296,11 @@ def named_entity_overlap(text1, text2):
                 entities2.add(entity_name)
 
     # Compute the named entity overlap between the two texts
-    overlap = len(entities1.intersection(entities2)) / float(len(entities1.union(entities2)))
-
-    return overlap
+    if float(len(entities1.union(entities2))) == 0:
+        return 0
+    else:
+        overlap = len(entities1.intersection(entities2)) / float(len(entities1.union(entities2)))
+        return overlap
 
 def compute_word2vec_embeddings(text):
     """
@@ -362,7 +353,7 @@ def compute_cosine_similarity(embedding1, embedding2):
         # Compute the cosine similarity between the two embeddings
         return 1 - cosine(embedding1, embedding2)
 
-def compute_fasttext_embeddings(text):
+def compute_fasttext_embeddings(text, ft_model):
     """
     Computes the FastText embedding for a given text by taking the mean of embeddings of all the words in the text.
 
@@ -372,8 +363,6 @@ def compute_fasttext_embeddings(text):
     Returns:
         numpy.ndarray or None: The computed embedding for the given text. If no embeddings are found, returns None.
     """
-    fasttext.util.download_model('en', if_exists='ignore')  # English
-    ft_model = fasttext.load_model('cc.en.300.bin')
     # Convert text to lowercase and split it into individual words
     words = text.lower().split()
 
@@ -475,26 +464,23 @@ def remove_accents(text):
 
 
 # If a token appears less than max_count, we change the word to a general one
-def special_tokens(corpus, max_count=1):
+def special_tokens(text, word_counts_one, max_count=1):
     '''
     Args:
-      corpus (list): The input corpus to treat special tokens
+      text (list): The input text to treat
+      word_counts (dict): Counter of words that only appears one in the dataset
       max_count (int, default = 1): Number of times required for the word to appear.
       Otherwise, it is change it to special_token
 
     Returns:
-      list: The final corpus as amended
+      str: The modified text
     '''
-    # Count the frequency of each word in the corpus
-    word_counts = Counter(word for sentence in corpus for word in tokenize_text(sentence))
-    modified_corpus = []
-    # Replace single-word occurrences with "special_token"
-    for question in corpus:
-        modified_sentence = ' '.join(
-            'special_token' if word_counts[word] == max_count else word for word in tokenize_text(question))
-        modified_corpus.append(modified_sentence)
 
-    return modified_corpus
+    # Replace single-word occurrences with "special_token"
+
+    modified_question = ' '.join(
+        'special_token' if word in word_counts_one.keys() else word for word in tokenize_text(text))
+    return modified_question
 
 def mask_entities(text):
     """
@@ -574,8 +560,7 @@ class BKTree:
         sorted_results = sorted(results)
         return sorted_results
 
-def spellchecker(q, V):
-    bk_tree = BKTree(editdistance.eval, V)
+def spellchecker(q, V, bk_tree):
     correction = []
     for word in q.split():
         if word in V:
@@ -599,7 +584,6 @@ def cast_list_as_strings(mylist):
         mylist_of_strings.append(str(x))
 
     return mylist_of_strings
-
 
 def get_features_from_df(df, count_vectorizer):
     """
