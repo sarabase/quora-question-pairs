@@ -131,6 +131,9 @@ dmypy.json
 # Folder where models are saved
 model_artifacts/
 
+cc.en.300.bin
+cc.en.300.bin.gz
+
 # Ignore PyCharm files
 .idea/
 *.iml
