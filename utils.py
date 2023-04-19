@@ -409,8 +409,7 @@ def remove_punctuation(text, question_mark=True):
         return re.sub(r'[^\w\s?]', '', text)
 
 
-# Remove english stopwords
-def remove_stopwords(text):
+def remove_stopwords(text, stop_words):
     """
     Args:
       text (str): The input text to remove stop words
@@ -418,8 +417,7 @@ def remove_stopwords(text):
     Returns:
       str: The final text without stop words
     """
-    # Get the stop words vocabulary
-    stop_words = set(nltk.corpus.stopwords.words('english'))
+
     # Tokenize the text
     words = tokenize_text(text)
     # Replace
@@ -601,6 +599,41 @@ def get_features_from_df(df, count_vectorizer):
 
     return X_q1q2
 
+def get_fasttext_embeddings_and_features(df, ft_model):
+
+    print('Computing fasttext embeddings for question 1')
+    X_q1 = df.apply(lambda x: compute_fasttext_embeddings(x['question1'], ft_model), axis=1)
+    print('Computing fasttext embeddings for question 2')
+    X_q2 = df.apply(lambda x: compute_fasttext_embeddings(x['question2'], ft_model), axis=1)
+
+    X_q1q2 = pd.concat([X_q1, X_q2], axis=1)
+    X_q1q2.columns = ['q1_embedding', 'q2_embedding']
+
+    df['cosine_similarity'] = X_q1q2.apply(lambda x: compute_cosine_similarity(x['q1_embedding'], x['q2_embedding']), axis=1)
+
+    print("Processing embeddings from question 1")
+    X_q1 = pd.DataFrame(X_q1.apply(pd.Series).add_prefix('q1_'))
+    print("Processing embeddings from question 2")
+    X_q2 = pd.DataFrame(X_q2.apply(pd.Series).add_prefix('q2_'))
+
+    df = pd.concat([df, X_q1, X_q2], axis=1)
+    df = df.drop(['question1', 'question2'], axis=1)
+
+    return df
+
+def report_best_scores(results, n_top=3):
+    for i in range(1, n_top + 1):
+        candidates = np.flatnonzero(results['rank_test_f1_score'] == i)
+        for candidate in candidates:
+            print("Model with rank: {0}".format(i))
+            print("Mean validation f1_score: {0:.3f} (std: {1:.3f})".format(
+                  results['mean_test_f1_score'][candidate],
+                  results['std_test_f1_score'][candidate]))
+            print("Mean validation accuracy: {0:.3f} (std: {1:.3f})".format(
+                  results['mean_test_accuracy'][candidate],
+                  results['std_test_accuracy'][candidate]))
+            print("Parameters: {0}".format(results['params'][candidate]))
+            print("")
 
 def get_mistakes(clf, X, y):
     """
