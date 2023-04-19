@@ -3,24 +3,18 @@ from sklearn.metrics import ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
 import nltk
-from collections import defaultdict
 import unidecode
 import unicodedata
 
 import pandas as pd
 import scipy
+import scipy.sparse
 import numpy as np
 import re # To do ReGeX
-import spacy # For NER
 from fuzzywuzzy import fuzz # To compute similiraties.
-
-import editdistance
 
 import gensim.downloader as api
 from scipy.spatial.distance import cosine
-
-import fasttext.util
-
 
 # ======================= Functions for feature engineering =======================
 # Number of words for a given text
@@ -620,6 +614,14 @@ def get_fasttext_embeddings_and_features(df, ft_model):
     df = df.drop(['question1', 'question2'], axis=1)
 
     return df
+
+def get_countvectorizer_features(df, count_vectorizer):
+    q1_count_vectorizer = count_vectorizer.transform(df['question1'])
+    q2_count_vectorizer = count_vectorizer.transform(df['question2'])
+    countvectorizer_features = scipy.sparse.hstack([q1_count_vectorizer, q2_count_vectorizer])
+    df_features = df.drop(['question1', 'question2'], axis=1)
+    df_features_sparse = scipy.sparse.csr_matrix(df_features)
+    return scipy.sparse.hstack([df_features_sparse, countvectorizer_features])
 
 def report_best_scores(results, n_top=3):
     for i in range(1, n_top + 1):
