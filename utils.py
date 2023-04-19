@@ -655,12 +655,12 @@ def evaluate_model(clf, X, y):
     """
     predictions = clf.predict(X)
     accuracy = clf.score(X, y)
+    roc_auc = roc_auc_score(y, predictions)
     precision = precision_score(y, predictions)
     recall = recall_score(y, predictions)
     f1 = f1_score(y, predictions)
 
     pred_proba = clf.predict_proba(X)
-    roc_auc = roc_auc_score(y, pred_proba)
     log_loss_score = log_loss(y, pred_proba)
 
     print(f"accuracy: {accuracy}")
