@@ -373,6 +373,137 @@ def compute_fasttext_embeddings(text, ft_model):
         # Take the mean of all embeddings to get a single embedding for the entire text
         return np.mean(embeddings, axis=0)
 
+
+def count_word_syllables(word):
+    '''
+    Args:
+        word (str): a tokenized word from a sentence
+
+    Return:
+        int: number of syllables from a word
+    '''
+    count = 0
+    vowels = 'aeiouy'
+    word = word.lower().strip(".:;?!")
+    if word[0] in vowels:
+        count += 1
+    for index in range(1, len(word)):
+        if word[index] in vowels and word[index - 1] not in vowels:
+            count += 1
+    if word.endswith('e'):
+        count -= 1
+    if word.endswith('le'):
+        count += 1
+    if count == 0:
+        count += 1
+    return int(count)
+
+
+def count_sentence_syllables(doc):
+    '''
+    Args:
+        doc (str): a raw sentence
+
+    Return:
+        int: number of syllables of the entire sentence
+    '''
+    count = 0
+    for w in tokenize_text(remove_accents(remove_punctuation(doc))):
+        count += count_word_syllables(w)
+    return int(count)
+
+
+def Flesch_Reading_Ease(doc, a=206.835, b=1.015, c=84.6):
+    '''
+    Args:
+        doc (str): sentence to analize
+        a (float): Flesch Reading-Ease parameter
+        b (float): Flesch Reading-Ease parameter
+        c (float): Flesch Reading-Ease parameter
+
+    Return:
+        str: Computes the Flesch Reading-Ease score of the sentence
+    '''
+    return a - b * (words_count(doc) / 1) - c * (count_sentence_syllables(doc) / words_count(doc))
+
+
+# Flesch-Kincaid Grade Level
+def Flesch_Grade_Level(doc, a=0.39, b=11.8, c=15.59):
+    '''
+    Args:
+        doc (str): sentence to analize
+        a (float): Flesch-Kincaid Grade Level parameter
+        b (float): Flesch-Kincaid Grade Level parameter
+        c (float): Flesch-Kincaid Grade Level parameter
+
+    Return:
+        str: Computes the Flesch-Kincaid Grade Level score of the sentence
+    '''
+    return a * (words_count(doc) / 1) + b * (count_sentence_syllables(doc) / words_count(doc)) - c
+
+
+class Linguistics():
+    '''
+    Makes use of scapy library to extract linguistic features form sentences to either use them as features themselves or to build more complex features.
+    '''
+
+    def __init__(self, doc):
+        '''
+        Args:
+            doc (str): sentence to analyze
+        '''
+        nlp = spacy.load("en_core_web_sm")
+        self.doc = doc
+        self.tokens = nlp(doc)
+
+    def text(self):
+        '''
+        Tokenizes the sentence
+        '''
+        return [token.text for token in self.tokens]
+
+    def lemma(self):
+        '''
+        Lemmatizes the sentence
+        '''
+        return [token.lemma_ for token in self.tokens]
+
+    def pos(self):
+        '''
+        Applies simple Part-Of-Speech tagging to the sentence
+        '''
+        return [token.pos_ for token in self.tokens]
+
+    def tag(self):
+        '''
+        Applies detailed Part-Of-Speech tagging to the sentence
+        '''
+        return [token.tag_ for token in self.tokens]
+
+    def dep(self):
+        '''
+        Applies the syntactic dependencey between tokens in the sentence
+        '''
+        return [token.dep_ for token in self.tokens]
+
+    def shape(self):
+        '''
+        Applies tagging to words according to their shape
+        '''
+        return [token.shape_ for token in self.tokens]
+
+    def is_alpha(self):
+        '''
+        Applies tagging according for word being an Alpha token or not
+        '''
+        return [token.is_alpha for token in self.tokens]
+
+    def is_stop(self):
+        '''
+        Applies tagging according for word being a stopword or not
+        '''
+        return [token.is_stop for token in self.tokens]
+
 # ======================= Functions for text preprocessing =======================
 # Tokenize a text
 def tokenize_text(text):
