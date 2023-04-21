@@ -10,11 +10,12 @@ import pandas as pd
 import scipy
 import scipy.sparse
 import numpy as np
-import re # To do ReGeX
-from fuzzywuzzy import fuzz # To compute similiraties.
+import re  # To do ReGeX
+from fuzzywuzzy import fuzz  # To compute similiraties.
 
 import gensim.downloader as api
 from scipy.spatial.distance import cosine
+
 
 # ======================= Functions for feature engineering =======================
 # Number of words for a given text
@@ -55,6 +56,7 @@ def nonAscii_word_count(text):
 
     return non_ascii_word_count
 
+
 def one_hot_begin(corpus):
     '''
     Args:
@@ -89,6 +91,7 @@ def one_hot_begin(corpus):
 
     return df_one_hot
 
+
 def first_word_equal(row):
     """Computes whether the first word of the two questions are equal.
 
@@ -105,6 +108,7 @@ def first_word_equal(row):
         return int(q1_words[0] == q2_words[0])
     else:
         return 0
+
 
 def last_word_equal(row):
     """Computes whether the last word of the two questions are equal.
@@ -123,6 +127,7 @@ def last_word_equal(row):
     else:
         return 0
 
+
 def common_words_count(row):
     """Computes the number of common words between the two questions.
 
@@ -136,6 +141,7 @@ def common_words_count(row):
     q2_words = row['question2'].split()
     common_words = set(q1_words).intersection(set(q2_words))
     return len(common_words)
+
 
 def common_words_ratio(row):
     """Computes the ratio of common words between the two questions to the total number of words in both questions.
@@ -151,6 +157,7 @@ def common_words_ratio(row):
     common_words = set(q1_words).intersection(set(q2_words))
     return len(common_words) / (len(q1_words) + len(q2_words))
 
+
 def fuzz_ratio(row):
     """Computes the fuzzy string matching ratio between the two questions.
 
@@ -161,6 +168,7 @@ def fuzz_ratio(row):
         An integer value indicating the fuzzy string matching ratio between the two questions.
     """
     return fuzz.ratio(row['question1'], row['question2'])
+
 
 def longest_substring_ratio(row):
     """Computes the ratio of the length of the longest common substring between the two questions to the length of the shorter question.
@@ -182,15 +190,17 @@ def longest_substring_ratio(row):
     substr_scores = []
     # Iterate over all possible substrings of q1
     for i in range(len_q1):
-        for j in range(i+1, len_q1+1):
+        for j in range(i + 1, len_q1 + 1):
             # Extract the substring from q1 and compute its ratio score with q2
             substr = q1[i:j]
             substr_scores.append(fuzz.ratio(substr, q2) / len(substr))
     # Return the maximum score in the list of substring scores
     return max(substr_scores)
 
+
 def num_of_characters(q):
     return len(q)
+
 
 def difference_word_count(q1, q2):
     len_q1 = len(q1.split())
@@ -204,16 +214,18 @@ def num_of_unique_words(q1, q2):
     num_unique_words = len(set(words))
     return num_unique_words
 
+
 def num_of_words(q1, q2):
     q1q2 = q1 + " " + q2
     words = q1q2.split()
     num_words = len(words)
     return num_words
 
+
 def total_unique_words_ratio(q1, q2):
     num_unique_words = num_of_unique_words(q1, q2)
     num_words = num_of_words(q1, q2)
-    return num_unique_words/num_words
+    return num_unique_words / num_words
 
 
 def oov_count(text, vocab):
@@ -296,6 +308,7 @@ def named_entity_overlap(text1, text2):
         overlap = len(entities1.intersection(entities2)) / float(len(entities1.union(entities2)))
         return overlap
 
+
 def compute_word2vec_embeddings(text):
     """
     Computes the word2vec embedding for a given text by taking the mean of embeddings of all the words in the text.
@@ -329,6 +342,7 @@ def compute_word2vec_embeddings(text):
         # Take the mean of all embeddings to get a single embedding for the entire text
         return np.mean(embeddings, axis=0)
 
+
 def compute_cosine_similarity(embedding1, embedding2):
     """
     Computes the cosine similarity between two given word embeddings.
@@ -346,6 +360,7 @@ def compute_cosine_similarity(embedding1, embedding2):
     else:
         # Compute the cosine similarity between the two embeddings
         return 1 - cosine(embedding1, embedding2)
+
 
 def compute_fasttext_embeddings(text, ft_model):
     """
@@ -504,6 +519,7 @@ class Linguistics():
         '''
         return [token.is_stop for token in self.tokens]
 
+
 # ======================= Functions for text preprocessing =======================
 # Tokenize a text
 def tokenize_text(text):
@@ -605,6 +621,7 @@ def special_tokens(text, word_counts_one, max_count=1):
         'special_token' if word in word_counts_one.keys() else word for word in tokenize_text(text))
     return modified_question
 
+
 def mask_entities(text):
     """
     Masks named entities of types PERSON, GPE, LOC, DATE, TIME, MONEY, and ORG with their respective entity labels.
@@ -620,6 +637,7 @@ def mask_entities(text):
         if ent.label_ in ['PERSON', 'GPE', 'LOC', 'DATE', 'TIME', 'MONEY', 'ORG']:
             text = text.replace(ent.text, f'<{ent.label_}>')
     return text
+
 
 def normalize_text(text, contractions_dict, abbreviations_dict):
     try:
@@ -683,6 +701,7 @@ class BKTree:
         sorted_results = sorted(results)
         return sorted_results
 
+
 def spellchecker(q, V, bk_tree):
     correction = []
     for word in q.split():
@@ -690,11 +709,12 @@ def spellchecker(q, V, bk_tree):
             correction.append(word)
         else:
             candidates = bk_tree.query(word, 2)
-            if len(candidates)>0:
+            if len(candidates) > 0:
                 correction.append(candidates[0][1])
             else:
                 correction.append(word)
     return ' '.join(correction)
+
 
 # ====================== Functions for trian_models and reproduce_results ======================
 def cast_list_as_strings(mylist):
@@ -707,6 +727,7 @@ def cast_list_as_strings(mylist):
         mylist_of_strings.append(str(x))
 
     return mylist_of_strings
+
 
 def get_features_from_df(df, count_vectorizer):
     """
@@ -724,8 +745,8 @@ def get_features_from_df(df, count_vectorizer):
 
     return X_q1q2
 
-def get_fasttext_embeddings_and_features(df, ft_model):
 
+def get_fasttext_embeddings_and_features(df, ft_model):
     print('Computing fasttext embeddings for question 1')
     X_q1 = df.apply(lambda x: compute_fasttext_embeddings(x['question1'], ft_model), axis=1)
     print('Computing fasttext embeddings for question 2')
@@ -734,7 +755,8 @@ def get_fasttext_embeddings_and_features(df, ft_model):
     X_q1q2 = pd.concat([X_q1, X_q2], axis=1)
     X_q1q2.columns = ['q1_embedding', 'q2_embedding']
 
-    df['cosine_similarity'] = X_q1q2.apply(lambda x: compute_cosine_similarity(x['q1_embedding'], x['q2_embedding']), axis=1)
+    df['cosine_similarity'] = X_q1q2.apply(lambda x: compute_cosine_similarity(x['q1_embedding'], x['q2_embedding']),
+                                           axis=1)
 
     print("Processing embeddings from question 1")
     X_q1 = pd.DataFrame(X_q1.apply(pd.Series).add_prefix('q1_'))
@@ -746,8 +768,8 @@ def get_fasttext_embeddings_and_features(df, ft_model):
 
     return df
 
-def get_countvectorizer_features(df, count_vectorizer):
 
+def get_countvectorizer_features(df, count_vectorizer):
     q1_count_vectorizer = count_vectorizer.transform(df['question1'])
     q2_count_vectorizer = count_vectorizer.transform(df['question2'])
 
@@ -758,19 +780,33 @@ def get_countvectorizer_features(df, count_vectorizer):
 
     return scipy.sparse.hstack([df_features_sparse, countvectorizer_features])
 
+
+def get_tfidf_features(df, tfidf):
+    q1_tfidf = tfidf.transform(df['question1'])
+    q2_tfidf = tfidf.transform(df['question2'])
+
+    tfidf_features = scipy.sparse.hstack([q1_tfidf, q2_tfidf])
+
+    df_features = df.drop(['question1', 'question2'], axis=1)
+    df_features_sparse = scipy.sparse.csr_matrix(df_features)
+
+    return scipy.sparse.hstack([df_features_sparse, tfidf_features])
+
+
 def report_best_scores(results, n_top=3):
     for i in range(1, n_top + 1):
         candidates = np.flatnonzero(results['rank_test_f1_score'] == i)
         for candidate in candidates:
             print("Model with rank: {0}".format(i))
             print("Mean validation f1_score: {0:.3f} (std: {1:.3f})".format(
-                  results['mean_test_f1_score'][candidate],
-                  results['std_test_f1_score'][candidate]))
+                results['mean_test_f1_score'][candidate],
+                results['std_test_f1_score'][candidate]))
             print("Mean validation accuracy: {0:.3f} (std: {1:.3f})".format(
-                  results['mean_test_accuracy'][candidate],
-                  results['std_test_accuracy'][candidate]))
+                results['mean_test_accuracy'][candidate],
+                results['std_test_accuracy'][candidate]))
             print("Parameters: {0}".format(results['params'][candidate]))
             print("")
+
 
 def get_mistakes(clf, X, y):
     """
