@@ -14,7 +14,7 @@ import re  # To do ReGeX
 from fuzzywuzzy import fuzz  # To compute similiraties.
 
 import gensim.downloader as api
-from scipy.spatial.distance import cosine
+from scipy.spatial.distance import cosine,minkowski, euclidean, cityblock
 
 
 # ======================= Functions for feature engineering =======================
@@ -360,8 +360,59 @@ def compute_cosine_similarity(embedding1, embedding2):
     else:
         # Compute the cosine similarity between the two embeddings
         return 1 - cosine(embedding1, embedding2)
+def compute_minkowski_similarity(embedding1, embedding2):
+    """
+    Compute the Minkowski similarity between two embeddings.
 
+    Args:
+        embedding1 (numpy.ndarray): The first embedding.
+        embedding2 (numpy.ndarray): The second embedding.
 
+    Returns:
+        float: The Minkowski similarity between the two embeddings. If either
+            embedding is None, returns None.
+    """
+    if embedding1 is None or embedding2 is None:
+        return None
+    else:
+        # Compute the Minkowski distance between the two embeddings and subtract from 1 to get similarity
+        return 1/(1+ minkowski(embedding1,embedding2))
+
+def compute_euclidean_similarity(embedding1, embedding2):
+    """
+    Compute the Euclidean similarity between two embeddings.
+
+    Args:
+        embedding1 (numpy.ndarray): The first embedding.
+        embedding2 (numpy.ndarray): The second embedding.
+
+    Returns:
+        float: The Euclidean similarity between the two embeddings. If either
+            embedding is None, returns None.
+    """
+    if embedding1 is None or embedding2 is None:
+        return None
+    else:
+        # Compute the Euclidean distance between the two embeddings and subtract from 1 to get similarity
+        return 1/(1+ euclidean(embedding1,embedding2))
+
+def compute_cityblock_similarity(embedding1, embedding2):
+    """
+    Compute the City Block (Manhattan) similarity between two embeddings.
+
+    Args:
+        embedding1 (numpy.ndarray): The first embedding.
+        embedding2 (numpy.ndarray): The second embedding.
+
+    Returns:
+        float: The City Block similarity between the two embeddings. If either
+            embedding is None, returns None.
+    """
+    if embedding1 is None or embedding2 is None:
+        return None
+    else:
+        # Compute the City Block distance (Manhattan distance) between the two embeddings and subtract from 1 to get similarity
+        return 1/(1+ cityblock(embedding1,embedding2))
 def compute_fasttext_embeddings(text, ft_model):
     """
     Computes the FastText embedding for a given text by taking the mean of embeddings of all the words in the text.
@@ -757,6 +808,13 @@ def get_fasttext_embeddings_and_features(df, ft_model):
 
     df['cosine_similarity'] = X_q1q2.apply(lambda x: compute_cosine_similarity(x['q1_embedding'], x['q2_embedding']),
                                            axis=1)
+    df['euclidian_similarity'] = X_q1q2.apply(lambda x: compute_euclidean_similarity(x['q1_embedding'], x['q2_embedding']),
+                                           axis=1)
+    df['cityblock_similarity'] = X_q1q2.apply(lambda x: compute_cityblock_similarity(x['q1_embedding'], x['q2_embedding']),
+                                           axis=1)
+    df['minkowsky_similarity'] = X_q1q2.apply(lambda x: compute_minkowski_similarity(x['q1_embedding'], x['q2_embedding']),
+        axis=1)
+
 
     print("Processing embeddings from question 1")
     X_q1 = pd.DataFrame(X_q1.apply(pd.Series).add_prefix('q1_'))
