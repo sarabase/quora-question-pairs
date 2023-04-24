@@ -822,7 +822,6 @@ def get_fasttext_embeddings_and_features(df, ft_model):
     X_q2 = pd.DataFrame(X_q2.apply(pd.Series).add_prefix('q2_'))
 
     df = pd.concat([df, X_q1, X_q2], axis=1)
-    df = df.drop(['question1', 'question2'], axis=1)
 
     return df
 
@@ -849,21 +848,6 @@ def get_tfidf_features(df, tfidf):
     df_features_sparse = scipy.sparse.csr_matrix(df_features)
 
     return scipy.sparse.hstack([df_features_sparse, tfidf_features])
-
-
-def report_best_scores(results, n_top=3):
-    for i in range(1, n_top + 1):
-        candidates = np.flatnonzero(results['rank_test_f1_score'] == i)
-        for candidate in candidates:
-            print("Model with rank: {0}".format(i))
-            print("Mean validation f1_score: {0:.3f} (std: {1:.3f})".format(
-                results['mean_test_f1_score'][candidate],
-                results['std_test_f1_score'][candidate]))
-            print("Mean validation accuracy: {0:.3f} (std: {1:.3f})".format(
-                results['mean_test_accuracy'][candidate],
-                results['std_test_accuracy'][candidate]))
-            print("Parameters: {0}".format(results['params'][candidate]))
-            print("")
 
 
 def get_mistakes(clf, X, y):
