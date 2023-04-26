@@ -14,7 +14,7 @@ import re  # To do ReGeX
 from fuzzywuzzy import fuzz  # To compute similiraties.
 
 import gensim.downloader as api
-from scipy.spatial.distance import cosine,minkowski, euclidean, cityblock
+from scipy.spatial.distance import cosine
 
 
 # ======================= Functions for feature engineering =======================
@@ -199,16 +199,46 @@ def longest_substring_ratio(row):
 
 
 def num_of_characters(q):
+    """
+    Computes the number of characters in a given string.
+
+    Parameters:
+        q (str): The input string.
+
+    Returns:
+        int: The number of characters in the input string.
+    """
     return len(q)
 
 
 def difference_word_count(q1, q2):
+    """
+    Computes the absolute difference in word count between two input strings.
+
+    Parameters:
+        q1 (str): The first input string.
+        q2 (str): The second input string.
+
+    Returns:
+        int: The absolute difference in word count between the input strings.
+    """
+
     len_q1 = len(q1.split())
     len_q2 = len(q2.split())
     return abs(len_q1 - len_q2)
 
 
 def num_of_unique_words(q1, q2):
+    """
+    Computes the number of unique words in the combined input strings.
+
+    Parameters:
+        q1 (str): The first input string.
+        q2 (str): The second input string.
+
+    Returns:
+        int: The number of unique words in the combined input strings.
+    """
     q1q2 = q1 + " " + q2
     words = q1q2.split()
     num_unique_words = len(set(words))
@@ -216,6 +246,16 @@ def num_of_unique_words(q1, q2):
 
 
 def num_of_words(q1, q2):
+    """
+    Computes the total number of words in the combined input strings.
+
+    Parameters:
+        q1 (str): The first input string.
+        q2 (str): The second input string.
+
+    Returns:
+        int: The total number of words in the combined input strings.
+    """
     q1q2 = q1 + " " + q2
     words = q1q2.split()
     num_words = len(words)
@@ -223,6 +263,17 @@ def num_of_words(q1, q2):
 
 
 def total_unique_words_ratio(q1, q2):
+    """
+    Computes the ratio of unique words to the total number of words in the combined input strings.
+
+    Parameters:
+        q1 (str): The first input string.
+        q2 (str): The second input string.
+
+    Returns:
+        float: The ratio of unique words to the total number of words in the combined input strings.
+    """
+
     num_unique_words = num_of_unique_words(q1, q2)
     num_words = num_of_words(q1, q2)
     return num_unique_words / num_words
@@ -360,59 +411,8 @@ def compute_cosine_similarity(embedding1, embedding2):
     else:
         # Compute the cosine similarity between the two embeddings
         return 1 - cosine(embedding1, embedding2)
-def compute_minkowski_similarity(embedding1, embedding2):
-    """
-    Compute the Minkowski similarity between two embeddings.
 
-    Args:
-        embedding1 (numpy.ndarray): The first embedding.
-        embedding2 (numpy.ndarray): The second embedding.
 
-    Returns:
-        float: The Minkowski similarity between the two embeddings. If either
-            embedding is None, returns None.
-    """
-    if embedding1 is None or embedding2 is None:
-        return None
-    else:
-        # Compute the Minkowski distance between the two embeddings and subtract from 1 to get similarity
-        return 1/(1+ minkowski(embedding1,embedding2))
-
-def compute_euclidean_similarity(embedding1, embedding2):
-    """
-    Compute the Euclidean similarity between two embeddings.
-
-    Args:
-        embedding1 (numpy.ndarray): The first embedding.
-        embedding2 (numpy.ndarray): The second embedding.
-
-    Returns:
-        float: The Euclidean similarity between the two embeddings. If either
-            embedding is None, returns None.
-    """
-    if embedding1 is None or embedding2 is None:
-        return None
-    else:
-        # Compute the Euclidean distance between the two embeddings and subtract from 1 to get similarity
-        return 1/(1+ euclidean(embedding1,embedding2))
-
-def compute_cityblock_similarity(embedding1, embedding2):
-    """
-    Compute the City Block (Manhattan) similarity between two embeddings.
-
-    Args:
-        embedding1 (numpy.ndarray): The first embedding.
-        embedding2 (numpy.ndarray): The second embedding.
-
-    Returns:
-        float: The City Block similarity between the two embeddings. If either
-            embedding is None, returns None.
-    """
-    if embedding1 is None or embedding2 is None:
-        return None
-    else:
-        # Compute the City Block distance (Manhattan distance) between the two embeddings and subtract from 1 to get similarity
-        return 1/(1+ cityblock(embedding1,embedding2))
 def compute_fasttext_embeddings(text, ft_model):
     """
     Computes the FastText embedding for a given text by taking the mean of embeddings of all the words in the text.
@@ -691,6 +691,18 @@ def mask_entities(text):
 
 
 def normalize_text(text, contractions_dict, abbreviations_dict):
+    """
+    Normalizes the input text by converting it to lowercase, expanding contractions, and replacing abbreviations.
+
+    Parameters:
+        text (str): The input text to be normalized.
+        contractions_dict (dict): A dictionary of contractions and their corresponding expansions.
+        abbreviations_dict (dict): A dictionary of abbreviations and their corresponding full forms.
+
+    Returns:
+        str: The normalized text.
+    """
+
     try:
         # Convert text to lowercase
         text = text.lower()
@@ -711,7 +723,23 @@ def normalize_text(text, contractions_dict, abbreviations_dict):
 
 
 class BKTree:
+    """
+    Implements the Burkhard-Keller Tree data structure for efficient searching of items in a metric space.
+
+    Attributes:
+        distfn (function): The distance function used to measure the distance between items in the tree.
+        tree (tuple): The root node of the BKTree containing the first word and an empty dictionary for children nodes.
+    """
+
     def __init__(self, distfn, words):
+        """
+        Initializes the BKTree with the given distance function and words.
+
+        Parameters:
+            distfn (function): The distance function used to measure the distance between items in the tree.
+            words (iterable): An iterable containing words to be added to the tree.
+        """
+
         self.distfn = distfn
 
         it = iter(words)
@@ -722,6 +750,13 @@ class BKTree:
             self._add_word(self.tree, i)
 
     def _add_word(self, parent, word):
+        """
+        Adds a word to the BKTree under the parent node.
+
+        Parameters:
+            parent (tuple): The parent node where the word should be added.
+            word (str): The word to be added to the tree.
+        """
         pword, children = parent
         d = self.distfn(word, pword)
         if d in children:
@@ -729,7 +764,19 @@ class BKTree:
         else:
             children[d] = (word, {})
 
-    def _search_descendants(self, parent, max_distance, distance, query_word):
+    def _search_descendants(self, parent, max_distance, distance, query_word): 
+        """
+        Searches for words in the BKTree within the specified maximum distance from the query_word.
+
+        Parameters:
+            parent (tuple): The parent node to search from.
+            max_distance (int): The maximum distance allowed between the query_word and the words found in the tree.
+            distance (function): The distance function used to measure the distance between items in the tree.
+            query_word (str): The word for which similar words are being searched.
+
+        Returns:
+            list: A list of tuples containing the distance and the corresponding word in the tree.
+        """
         node_word, children_dict = parent
         dist_to_node = distance(query_word, node_word)
         self.visited_nodes.append(node_word)
@@ -747,6 +794,17 @@ class BKTree:
         return results
 
     def query(self, query_word, max_distance):
+        """
+        Searches for words in the BKTree within the specified maximum distance from the query_word.
+
+        Parameters:
+            query_word (str): The word for which similar words are being searched.
+            max_distance (int): The maximum distance allowed between the query_word and the words found in the tree.
+
+        Returns:
+            list: A sorted list of tuples containing the distance and the corresponding word in the tree.
+        """
+
         self.visited_nodes = []
         results = self._search_descendants(self.tree, max_distance, self.distfn, query_word)
         sorted_results = sorted(results)
@@ -754,6 +812,17 @@ class BKTree:
 
 
 def spellchecker(q, V, bk_tree):
+    """
+    Performs spell correction on the input string using a given vocabulary and a BKTree.
+
+    Parameters:
+        q (str): The input string to be corrected.
+        V (set): A set containing the vocabulary of known words.
+        bk_tree (BKTree): A BKTree instance containing the vocabulary and distance function.
+
+    Returns:
+        str: The corrected input string.
+    """
     correction = []
     for word in q.split():
         if word in V:
@@ -808,13 +877,6 @@ def get_fasttext_embeddings_and_features(df, ft_model):
 
     df['cosine_similarity'] = X_q1q2.apply(lambda x: compute_cosine_similarity(x['q1_embedding'], x['q2_embedding']),
                                            axis=1)
-    df['euclidian_similarity'] = X_q1q2.apply(lambda x: compute_euclidean_similarity(x['q1_embedding'], x['q2_embedding']),
-                                           axis=1)
-    df['cityblock_similarity'] = X_q1q2.apply(lambda x: compute_cityblock_similarity(x['q1_embedding'], x['q2_embedding']),
-                                           axis=1)
-    df['minkowsky_similarity'] = X_q1q2.apply(lambda x: compute_minkowski_similarity(x['q1_embedding'], x['q2_embedding']),
-        axis=1)
-
 
     print("Processing embeddings from question 1")
     X_q1 = pd.DataFrame(X_q1.apply(pd.Series).add_prefix('q1_'))
@@ -822,6 +884,7 @@ def get_fasttext_embeddings_and_features(df, ft_model):
     X_q2 = pd.DataFrame(X_q2.apply(pd.Series).add_prefix('q2_'))
 
     df = pd.concat([df, X_q1, X_q2], axis=1)
+    df = df.drop(['question1', 'question2'], axis=1)
 
     return df
 
@@ -848,6 +911,21 @@ def get_tfidf_features(df, tfidf):
     df_features_sparse = scipy.sparse.csr_matrix(df_features)
 
     return scipy.sparse.hstack([df_features_sparse, tfidf_features])
+
+
+def report_best_scores(results, n_top=3):
+    for i in range(1, n_top + 1):
+        candidates = np.flatnonzero(results['rank_test_f1_score'] == i)
+        for candidate in candidates:
+            print("Model with rank: {0}".format(i))
+            print("Mean validation f1_score: {0:.3f} (std: {1:.3f})".format(
+                results['mean_test_f1_score'][candidate],
+                results['std_test_f1_score'][candidate]))
+            print("Mean validation accuracy: {0:.3f} (std: {1:.3f})".format(
+                results['mean_test_accuracy'][candidate],
+                results['std_test_accuracy'][candidate]))
+            print("Parameters: {0}".format(results['params'][candidate]))
+            print("")
 
 
 def get_mistakes(clf, X, y):
